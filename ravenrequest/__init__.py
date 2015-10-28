@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 """
-Raven-Request is a custom Requests class to log onto Raven, the University of Cambridge's central
+Raven Request is a custom Requests class to log onto Raven, the University of Cambridge's central
 web authentication service. Basic usage:
     
     >>> from ravenrequest import Raven

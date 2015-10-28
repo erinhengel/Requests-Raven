@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(
-    name='raven',
+    name='raven-request',
     version='0.0.1',
     description='Requests wrapper to log into Raven.',
     author='Erin Hengel',
