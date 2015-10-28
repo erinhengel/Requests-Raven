@@ -19,7 +19,7 @@ www.ebscohost.com, respectively.
     >>> pdf = conn.pdf(doi=id)
     >>> open('file.pdf', 'wb').write(pdf)
     
-Full documentation at <http://www.erinhengel.com/software/raven>.
+Full documentation at <http://www.erinhengel.com/software/raven-request>.
 
 :copyright: (c) 2015 by Erin Hengel.
 :license: Apache 2.0, see LICENSE for more details.
