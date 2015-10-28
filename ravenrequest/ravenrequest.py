@@ -15,7 +15,7 @@ class Raven(object):
             1. authenticate the Raven user;
             2. complete the SAML handshake;
             3. access the destination URL.
-        Requests session object stored in session attribute for reuse.
+        Requests Session object stored in session attribute for reuse.
     """
     def __init__(self, url, login={}):
         
@@ -23,7 +23,9 @@ class Raven(object):
         if 'userid' not in login:
             login['userid'] = input('CRSid (userid): ')
         if 'pwd' not in login:
-            auth['pwd'] = getpass.getpass(stream=sys.stderr, prompt='Raven password (pwd): ')
+            login['pwd'] = getpass.getpass(stream=sys.stderr, prompt='Raven password (pwd): ')
+        
+        # Input value to submit form.
         login['submit'] = 'Login'
         
         # Start session and store in session attribute.
@@ -49,14 +51,13 @@ class Raven(object):
         try:
             saml['SAMLResponse'] = soup.find(attrs={'name': 'SAMLResponse'})['value']
             saml['url2'] = soup.find('form')['action']
-        # If no SAML response, username and password probably entered incorrectly.
-        except TypeError:
+        except TypeError: # Username and password probably entered incorrectly.
             traceback.print_exc(file=sys.stdout)
             print("You're getting this error probably because your CRSid or password are incorrect.")
-            print("If this error persists, let us know: https://github.com/erinhengel/RavenLogin.")
+            print("If this error persists, say something: github.com/erinhengel/raven-request.")
             sys.exit(1)
         
-        # Complete handshake.
+        # Complete SAML handshake.
         post = self.session.post(saml['url2'], data=saml)
         
         # Save destination URL.
