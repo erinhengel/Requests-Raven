@@ -9,7 +9,7 @@ setup(
     author='Erin Hengel',
     url='http://www.erinhengel.com/software/raven/',
     packages = ['raven'],
-    install_requires=['requests>=2.8.1'],
+    install_requires=['requests>=2.8.1', 'beautifulsoup4>=4.4.1'],
     package_dir={'raven': 'raven'},
     include_package_data=True,
     author_email='erin.hengel@gmail.com',
