@@ -52,7 +52,7 @@ The Raven class logs into Raven and establishes a connection with the host. The 
 
 JSTOR and EHOST are Raven subclasses specifically for logging onto www.jstor.org and
 www.ebscohost.com, respectively. They include the ``html`` and ``pdf`` attributes to
-download the html and pdf, respectively, of a particular document in their databases.
+download the webpage and pdf, respectively, of a particular document in their databases.
 
 .. code-block:: python
     
