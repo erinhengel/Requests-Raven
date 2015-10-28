@@ -13,14 +13,14 @@ class Raven(object):
         self.session = requests.Session()
         
         ezproxy = "http://ezproxy.lib.cam.ac.uk:2048/login"
-        raven = 'https://raven.cam.ac.uk/auth/authenticate2.html'
+        raven_login = 'https://raven.cam.ac.uk/auth/authenticate2.html'
 
-        # Login
+        # Log into Raven.
         login['submit'] = 'Login'
-        self.session.post(raven, data=login)
-        request = self.session.get(ezproxy+'?url='+url)
+        self.session.post(raven_login, data=login)
         
         # SAML request.
+        request = self.session.get(ezproxy+'?url='+url)
         soup = BeautifulSoup(request.text, 'html.parser')
         saml = {
             'SAMLRequest': soup.find(attrs={'name': 'SAMLRequest'})['value'],
@@ -29,11 +29,12 @@ class Raven(object):
         }
         
         # SAML response.
-        post = self.session.post(saml['url1'], data=saml)
-        soup = BeautifulSoup(post.text, 'html.parser')
+        response = self.session.post(saml['url1'], data=saml)
+        soup = BeautifulSoup(response.text, 'html.parser')
         saml['SAMLResponse'] = soup.find(attrs={'name': 'SAMLResponse'})['value']
         saml['url2'] = soup.find('form')['action']
         
+        # Final post.
         post = self.session.post(saml['url2'], data=saml)
         self.url = post.url
 
