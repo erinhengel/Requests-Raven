@@ -33,8 +33,7 @@ The Raven class logs into Raven and establishes a connection with the host. The 
     >>> deets = {'userid': 'ab123', 'pwd': 'XXXX'}
     >>> conn = Raven(url='http://www.example.com', login=deets)
 	
-    # The final destination url is stored in the url attribute.
-    # It looks something like this
+    # The final destination url looks something like this
     >>> conn.url
     http://libsta28.cam.ac.uk:2093/
 	
