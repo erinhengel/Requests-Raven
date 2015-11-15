@@ -54,7 +54,7 @@ class Raven(object):
         except TypeError: # Username and password probably entered incorrectly.
             traceback.print_exc(file=sys.stdout)
             print("You're getting this error probably because your CRSid or password are incorrect.")
-            print("If this error persists, say something: github.com/erinhengel/raven-request.")
+            print("If this error persists, we have a problem so say something: github.com/erinhengel/raven-request.")
             sys.exit(1)
         
         # Complete SAML handshake.

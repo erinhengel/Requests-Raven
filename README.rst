@@ -31,19 +31,19 @@ The Raven class logs into Raven and establishes a connection with the host. The 
 	
     # Establish Raven connection object for the website www.example.com.
     >>> deets = {'userid': 'ab123', 'pwd': 'XXXX'}
-    >>> conn = Raven(url='http://www.example.com', login=deets)
+    >>> conn = Raven(url='http://qje.oxfordjournals.org', login=deets)
 	
     # The final destination url looks something like this.
     >>> conn.url
-    http://libsta28.cam.ac.uk:2093/
+    http://libsta28.lib.cam.ac.uk:2924
 	
     # Use session attribute to access Requests methods.
     >>> request = conn.session.get(conn.url+'/secretstuff.html')
-    >>> request.status
+    >>> request.status_code
     ...
 	
     # Do stuff with your request object.
-    >>> from bs4 import beautifulsoup
+    >>> from bs4 import BeautifulSoup
     >>> soup = BeautifulSoup(request.text, 'html.parser')
     >>> soup.title
     ...
