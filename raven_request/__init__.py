@@ -3,14 +3,14 @@
 Raven Request is a custom Requests class to log onto Raven, the University of Cambridge's central
 web authentication service. Basic usage:
     
-    >>> from ravenrequest import Raven
+    >>> from raven_request import Raven
     >>> deets = {'userid': 'ab123', 'pwd': 'XXXX'}
     >>> s = Raven(url='http://www.example.com', login=deets).session
     
 JSTOR and EHOST are Raven subclasses specifically for logging onto www.jstor.org and
 www.ebscohost.com, respectively.
     
-    >>> from ravenrequest import JSTOR
+    >>> from raven_request import JSTOR
     >>> id = '10.1086/682574'
     >>> conn = JSTOR(login=deets)
     >>> html = conn.html(doi=id)
@@ -26,10 +26,10 @@ Full documentation at <http://www.erinhengel.com/software/raven-request>.
 
 """
 
-__title__ = 'ravenrequest'
+__title__ = 'raven_request'
 __version__ = '0.0.1'
 __author__ = 'Erin Hengel'
 __license__ = 'Apache 2.0'
 __copyright__ = 'Copyright 2015 Erin Hengel'
 
-from .ravenrequest import *
+from .raven_request import *

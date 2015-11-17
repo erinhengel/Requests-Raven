@@ -1,4 +1,4 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 from bs4 import BeautifulSoup
 import requests
@@ -8,6 +8,9 @@ import sys
 from urllib.parse import urlparse, parse_qs
 import traceback
 import getpass
+import bibtexparser
+from bibtexparser.bparser import BibTexParser
+from bibtexparser.customization import convert_to_unicode
 
 
 class Raven(object):
@@ -72,20 +75,49 @@ class JSTOR(Raven):
     def __init__(self, login):
         Raven.__init__(self, url='http://www.jstor.org', login=login)
     
-    
-    def pdf(self, doi, params={'acceptTC': 'true'}, redirect=4):
+    def pdf(self, id, params={'acceptTC': 'true'}, redirect=4):
+        """ Download pdf of document. """
+        
         for n in range(0, redirect):
-            request = self.session.get(self.url+'/stable/pdfplus/'+doi+'.pdf', params=params)
+            request = self.session.get(self.url+'/stable/pdfplus/'+id+'.pdf', params=params)
             if 'application/pdf' in request.headers['Content-Type']:
                 return request.content
         print("PDF not found.")
     
-    
-    def html(self, doi):
-        request = self.session.get(self.url+'/stable/'+doi)
+    def html(self, id):
+        """ Download html of document's webpage. """
+        request = self.session.get(self.url+'/stable/info/'+id)
         return request.text
-
-
+        
+    def ref(self, id, affiliation=False):
+        """ Download bibliographic data of document. """
+        request = self.session.get(self.url+'/citation/text/'+id)
+        try:
+            parser = BibTexParser()
+            parser.customization = convert_to_unicode
+            bibtex = bibtexparser.loads(request.text, parser=parser).entries[0]
+            bibtex['author'] = list(map(str.strip, bibtex['author'].split(',')))
+        except IndexError:
+            return
+        
+        if affiliation:
+            html = self.html(id=id)
+            soup = BeautifulSoup(html, 'html.parser')
+            
+            authinfo = soup.find('div', class_='authorInfo')
+            authors = []
+            for author in bibtex['author']:
+                authdict = {'name':author}
+                if authinfo:
+                    regex = '\s'.join(author.split())
+                    affiliation = authinfo.find(string=re.compile(regex, re.UNICODE))
+                    if affiliation:
+                        authdict['affiliation'] = affiliation.next_element.string.strip()
+                authors.append(authdict)
+            bibtex['author'] = authors
+        
+        return bibtex
+        
 class EHOST(Raven):
     """ Create Raven connection to www.ebscohost.com.
         Download html of document's webpage.
@@ -94,21 +126,19 @@ class EHOST(Raven):
     def __init__(self, login):
         Raven.__init__(self, url='http://search.ebscohost.com/login.aspx', login=login)
     
-    
-    def page(self, doi):
+    def page(self, id):
         params = {
             'direct': 'true',
             'db': 'bth',
-            'AN': str(doi),
+            'AN': str(id),
             'site':'ehost-live',
             'scope':'site'
         }
         request = self.session.get(self.url, params=params)
         return request
     
-    
-    def pdf(self, doi):
-        request = self.page(doi)
+    def pdf(self, id):
+        request = self.page(id)
         url_ps = urlparse(request.url)
         url_qy = parse_qs(url_ps.query)
         viewer_url = url_ps.scheme + '://' + url_ps.netloc + '/ehost/pdfviewer/pdfviewer'
@@ -123,9 +153,7 @@ class EHOST(Raven):
         request = self.session.get(pdf_url)
         return request.content
     
-    
-    def html(self, doi):
-        request = self.page(doi)
+    def html(self, id):
+        request = self.page(id)
         return request.text
-
 
