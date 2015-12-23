@@ -51,7 +51,7 @@ The Raven class logs into Raven and establishes a connection with the host. The 
 
 
 JSTOR, EBSCOhost and Wiley are Raven subclasses specifically for logging onto www.jstor.org,
-www.ebscohost.com and `onlinelibrary.wiley.com <http://onlinelibrary.wiley.com/>` respectively.
+www.ebscohost.com and `onlinelibrary.wiley.com <http://onlinelibrary.wiley.com/>`_ respectively.
 They include the ``html``, ``pdf`` and ``ref`` methods to download the webpage, pdf and bibliographic
 information, respectively, of a particular document in their databases.
 
