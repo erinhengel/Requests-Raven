@@ -10,7 +10,7 @@ Installation
 	
 .. code-block:: bash
 
-	$ pip install ravenrequest
+	$ pip install raven_request
 
 
 Documentation
@@ -47,7 +47,7 @@ The Raven class logs into Raven and establishes a connection with the host. The 
     >>> from bs4 import BeautifulSoup
     >>> soup = BeautifulSoup(request.text, 'html.parser')
     >>> soup.title
-	<title>Behavioral Hazard in Health Insurance </title>
+    <title>Behavioral Hazard in Health Insurance </title>
 
 
 JSTOR, EBSCOhost and Wiley are Raven subclasses specifically for logging onto www.jstor.org,
@@ -69,8 +69,8 @@ of a particular document in their databases.
     # Download the document pdf.
     >>> pdf = conn.pdf(id=doi)
     
-	# Download the biliographic information.
-	>>> biblio = conn.ref(id=doi)
-	>>> biblio['authors']
-	[{'name': 'Per Krusell'}, {'name': 'Anthony A. Smith'}]
+    # Download the biliographic information.
+    >>> biblio = conn.ref(id=doi)
+    >>> biblio['authors']
+    [{'name': 'Per Krusell'}, {'name': 'Anthony A. Smith'}]
 
