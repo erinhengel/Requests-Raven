@@ -11,6 +11,7 @@ import getpass
 import bibtexparser
 from bibtexparser.bparser import BibTexParser
 from bibtexparser.customization import convert_to_unicode
+import xmltodict
 
 
 class Raven(object):
@@ -75,30 +76,37 @@ class JSTOR(Raven):
     def __init__(self, login):
         Raven.__init__(self, url='http://www.jstor.org', login=login)
     
+    def html(self, id):
+        """ Download html of document's webpage. """
+        request = self.session.get(self.url+'/stable/info/'+str(id))
+        return request.text
+    
     def pdf(self, id, params={'acceptTC': 'true'}, redirect=4):
         """ Download pdf of document. """
         
         for n in range(0, redirect):
-            request = self.session.get(self.url+'/stable/pdfplus/'+id+'.pdf', params=params)
+            request = self.session.get(self.url+'/stable/pdfplus/'+str(id)+'.pdf', params=params)
             if 'application/pdf' in request.headers['Content-Type']:
                 return request.content
         print("PDF not found.")
-    
-    def html(self, id):
-        """ Download html of document's webpage. """
-        request = self.session.get(self.url+'/stable/info/'+id)
-        return request.text
         
     def ref(self, id, affiliation=False):
         """ Download bibliographic data of document. """
-        request = self.session.get(self.url+'/citation/text/'+id)
+        request = self.session.get(self.url+'/citation/text/'+str(id))
+        text = request.content.decode('utf8').replace(u'\xa0', u' ')
         try:
             parser = BibTexParser()
             parser.customization = convert_to_unicode
-            bibtex = bibtexparser.loads(request.text, parser=parser).entries[0]
-            bibtex['author'] = list(map(str.strip, bibtex['author'].split(',')))
+            bibtex = bibtexparser.loads(text, parser=parser).entries[0]
         except IndexError:
             return
+        
+        bibtex['authors'] = bibtex.pop('author')
+        bibtex['authors'] = list(map(str.strip, bibtex['authors'].split(',')))
+        bibtex['authors'] = [{'name': x} for x in bibtex['authors']]
+        
+        bibtex['issn'] = list(map(str.strip, bibtex['issn'].split(',')))
+        bibtex['year'] = int(bibtex['year'])
         
         if affiliation:
             html = self.html(id=id)
@@ -106,19 +114,19 @@ class JSTOR(Raven):
             
             authinfo = soup.find('div', class_='authorInfo')
             authors = []
-            for author in bibtex['author']:
-                authdict = {'name':author}
+            for author in bibtex['authors']:
+                authdict = {'name':author['name']}
                 if authinfo:
-                    regex = '\s'.join(author.split())
+                    regex = '\s'.join(author['name'].split())
                     affiliation = authinfo.find(string=re.compile(regex, re.UNICODE))
                     if affiliation:
                         authdict['affiliation'] = affiliation.next_element.string.strip()
                 authors.append(authdict)
-            bibtex['author'] = authors
+            bibtex['authors'] = authors
         
         return bibtex
         
-class EHOST(Raven):
+class EBSCOhost(Raven):
     """ Create Raven connection to www.ebscohost.com.
         Download html of document's webpage.
         Download pdf of document.
@@ -126,10 +134,10 @@ class EHOST(Raven):
     def __init__(self, login):
         Raven.__init__(self, url='http://search.ebscohost.com/login.aspx', login=login)
     
-    def page(self, id):
+    def page(self, id, db='bth'):
         params = {
             'direct': 'true',
-            'db': 'bth',
+            'db': db,
             'AN': str(id),
             'site':'ehost-live',
             'scope':'site'
@@ -137,8 +145,12 @@ class EHOST(Raven):
         request = self.session.get(self.url, params=params)
         return request
     
-    def pdf(self, id):
-        request = self.page(id)
+    def html(self, id, db='bth'):
+        request = self.page(id, db)
+        return request.text
+
+    def pdf(self, id, db='bth'):
+        request = self.page(id, db)
         url_ps = urlparse(request.url)
         url_qy = parse_qs(url_ps.query)
         viewer_url = url_ps.scheme + '://' + url_ps.netloc + '/ehost/pdfviewer/pdfviewer'
@@ -152,8 +164,231 @@ class EHOST(Raven):
         pdf_url = soup.find(attrs={'name': 'pdfUrl'}).attrs['value']
         request = self.session.get(pdf_url)
         return request.content
+        
+    def ref(self, id, db='bth'):
+        request = self.page(id, db)
+        url_ps = urlparse(request.url)
+        url_qy = parse_qs(url_ps.query)
+        
+        export_url = '{}://{}/ehost/delivery/ExportPanelSave/{}__{}__AN'.format(url_ps.scheme, url_ps.netloc, db, id)
+        params = {
+            'sid': url_qy['sid'][0],
+            'vid': url_qy['vid'][0],
+            'hid': url_qy['hid'][0],
+            'bdata': url_qy['bdata'],
+            'theExportFormat': 6
+        }
+        
+        request = self.session.get(export_url, params=params)
+        
+        root = xmltodict.parse(request.text)
+        data = root['records']['rec']['header']
+        
+        bibtex = {
+            'AN': data['@uiTerm'],
+            'url': data['displayInfo']['pLink']['url'],
+            'shortDbName': data['@shortDbName'],
+            'longDbName': data['@longDbName'],
+            'journal': data['controlInfo']['jinfo']['jtl'],
+            'issn': data['controlInfo']['jinfo']['issn'],
+            'year': data['controlInfo']['pubinfo']['dt']['@year'],
+            'month': data['controlInfo']['pubinfo']['dt']['@month'],
+            'vol': data['controlInfo']['pubinfo']['vid'],
+            'no': data['controlInfo']['pubinfo']['iid'],
+            'pg': data['controlInfo']['artinfo']['ppf'],
+            'pg_count': data['controlInfo']['artinfo']['ppct'],
+            'title': data['controlInfo']['artinfo']['tig']['atl'],
+            'subject': [x['#text'] for x in data['controlInfo']['artinfo']['sug']['subj']],
+            'abstract': data['controlInfo']['artinfo']['ab'],
+            'pubtype': data['controlInfo']['artinfo']['pubtype'],
+            'doctype': data['controlInfo']['artinfo']['doctype']
+        }
+        
+        a_info = data['controlInfo']['artinfo']['aug']
+        affiliation = any('affil' in item for item in a_info.items())
+        authors = []
+        for n in range(len(a_info['au'])):
+            if affiliation:
+                authors.append({'name': a_info['au'][n], 'affiliation': a_info['affil'][n]})
+            else:
+                authors.append({'name': a_info['au'][n]})
+        bibtex['authors'] = authors
+        
+        return bibtex
+        
+        
+class OxfordQJE(Raven):
+    """ Create Raven connection to www.oxfordjournals.com.
+        Download html of document's webpage.
+        Download pdf of document.
+    """
+    
+    def __init__(self, login):
+        Raven.__init__(self, url='http://qje.oxfordjournals.org', login=login)
+        
+    def search(self, id):
+        params = {'submit': 'yes', 'doi': id}
+        search_url = self.url + '/search'
+        request = self.session.get(search_url, params=params)
+        soup = BeautifulSoup(request.text, 'html.parser')
+        
+        frame_link = soup.find(attrs={'rel': 'full-text.pdf'})['href']
+        issue = re.search('(content|reprint)/(?P<vol>\d+)/(?P<num>\d+)/(?P<page>\d+).*\?sid=(?P<sid>.*)', frame_link).groupdict()
+        
+        html_link = '{}/content/{}/{}/{}.abstract?sid={}'.format(self.url, issue['vol'], issue['num'], issue['page'], issue['sid'])
+        pdf_link = '{}/content/{}/{}/{}.full.pdf'.format(self.url, issue['vol'], issue['num'], issue['page'])
+        
+        return {'html': html_link, 'pdf': pdf_link, 'issue': issue}
     
     def html(self, id):
-        request = self.page(id)
+        links = self.search(id)
+        request = self.session.get(links['html'])
         return request.text
-
+        
+    def pdf(self, id):
+        links = self.search(id)
+        request = self.session.get(links['pdf'])
+        return request.content
+    
+    def ref(self, id, affiliation=False):
+        links = self.search(id)
+        gca = 'qje;{}/{}/{}'.format(links['issue']['vol'], links['issue']['num'], links['issue']['page'])
+        params = {'type': 'bibtex', 'gca' : gca}
+        request = self.session.get(self.url+'/citmgr', params=params)
+        
+        text = request.content.decode('utf8').replace(u'\xa0', u' ')
+        try:
+            parser = BibTexParser()
+            parser.customization = convert_to_unicode
+            bibtex = bibtexparser.loads(text, parser=parser).entries[0]
+        except IndexError:
+            return
+        
+        bibtex['authors'] = bibtex.pop('author')
+        bibtex['authors'] = list(map(str.strip, bibtex['authors'].split(' and ')))
+        bibtex['authors'] = [{'name': x} for x in bibtex['authors']]
+        
+        if affiliation:
+            request = self.session.get(links['html'])
+            soup = BeautifulSoup(request.text, 'html.parser')
+            
+            try:
+                citation_authors = soup.find("ol", class_="affiliation-list").find_all('address')
+                citation_authors = [x.text.strip() for x in citation_authors if x != '\n']
+                if len(citation_authors) == len(bibtex['authors']):
+                    for n in range(len(bibtex['authors'])):
+                        bibtex['authors'][n]['affiliation'] = citation_authors[n]
+                else:
+                    for n in range(len(bibtex['authors'])):
+                        bibtex['authors'][n]['affiliation'] = ' '.join(citation_authors)
+            except AttributeError:
+                for n in range(len(bibtex['authors'])):
+                    bibtex['authors'][n]['affiliation'] = None
+                    
+        return bibtex
+        
+class Wiley(Raven):
+    
+    def __init__(self, login):
+        Raven.__init__(self, url='http://onlinelibrary.wiley.com', login=login)
+        
+    def html(self, id):
+        url = '{}/doi/{}/abstract'.format(self.url, id)
+        request = self.session.get(url)
+        return request.text
+        
+    def pdf(self, id):
+        pdf_url = '{}/doi/{}/pdf'.format(self.url, id)
+        request = self.session.get(pdf_url)
+        soup = BeautifulSoup(request.text, 'html.parser')
+        pdf_url = soup.find(attrs={'id': 'pdfDocument'}).attrs['src']
+        request = self.session.get(pdf_url)
+        return request.content
+        
+    def ref(self, id, affiliation=False):
+        def text_clean(string):
+            return string.strip().replace(u'\xa0', u' ')
+        def find_affiliation(next_element, n):
+            if next_element['name'] == 'citation_author_institution':
+                bibtex['authors'][n]['affiliation'] = text_clean(next_element['content'])
+                return True
+        
+        ref_url = '{}/documentcitationdownloadformsubmit'.format(self.url)
+        payload = {
+            'fileFormat': 'PLAIN_TEXT',
+            'hasAbstract': 'CITATION_AND_ABSTRACT',
+            'doi': id
+        }
+        request = self.session.post(ref_url, data=payload)
+        raw_text = list(iter(request.text.splitlines()))
+        bibtex = {'authors': [], 'keywords': []}
+        for item in raw_text:
+            match = re.match('(?P<key>[A-Z]{2})\s{2}-\s(?P<value>.*)', item)
+            if match:
+                value = match.group('value')
+                key = match.group('key')
+                if key =='AU':
+                    bibtex['authors'].append({'name': value})
+                elif key == 'TI':
+                    bibtex['title'] = text_clean(value)
+                elif key == 'JO':
+                    bibtex['journal'] = text_clean(value)
+                elif key == 'VL':
+                    bibtex['volume'] = text_clean(value)
+                elif key == 'IS':
+                    bibtex['issue'] = text_clean(value)
+                elif key == 'PB':
+                    bibtex['publisher'] = text_clean(value)
+                elif key == 'SP':
+                    bibtex['start_page'] = text_clean(value)
+                elif key == 'EP':
+                    bibtex['end_page'] = text_clean(value)
+                elif key == 'KW':
+                    bibtex['keywords'].append(text_clean(value))
+                elif key == 'PY':
+                    bibtex['year'] = text_clean(value)
+                elif key == 'AB':
+                    bibtex['abstract'] = text_clean(value)
+        
+        if affiliation:
+            abstract_url = '{}/doi/{}/abstract'.format(self.url, id)
+            request = self.session.get(abstract_url)
+            soup = BeautifulSoup(request.text, 'html.parser')
+            
+            n = -1
+            citation_authors = soup.find_all(attrs={'name': 'citation_author'})
+            for author in bibtex['authors']:
+                n += 1
+                found = False
+                
+                for citation_author in citation_authors:
+                    if citation_author['content'] == author['name']:
+                        found = find_affiliation(citation_author.next_element, n)
+                        break
+                if found: continue
+                
+                nlist = author['name'].split(', ')
+                for citation_author in citation_authors:
+                    citation_nlist = citation_author['content'].split(', ')
+                    if citation_nlist[0].strip() == nlist[0].strip():
+                        found = find_affiliation(citation_author.next_element, n)
+                        break
+                if found: continue
+                
+                for citation_author in citation_authors:
+                    citation_nlist = citation_author['content'].split(', ')
+                    if citation_nlist[1].strip() == nlist[1].strip():
+                        found = find_affiliation(citation_author.next_element, n)
+                        break
+                if found: continue
+                
+                bibtex['authors'][n]['affiliation'] = None
+                
+            n = 0
+            for author in bibtex['authors']:
+                bibtex['authors'][n]['name'] = text_clean(author['name'])
+                n += 1
+            
+        return bibtex
+        
+        
