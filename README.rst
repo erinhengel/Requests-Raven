@@ -38,7 +38,7 @@ The Raven class logs into Raven and establishes a connection with the host. The 
     http://libsta28.lib.cam.ac.uk:2924
 	
     # Use session attribute to access Requests methods.
-	>>> url = conn.url + '/content/130/4/1623.full'
+    >>> url = conn.url + '/content/130/4/1623.full'
     >>> request = conn.session.get(url)
     >>> request.status_code
     200
