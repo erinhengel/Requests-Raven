@@ -1,7 +1,7 @@
 Requests-Raven
 ==============
 
-Requests-Raven is a custom Requests class to log onto Raven, the University of Cambridge's central
+Requests-Raven is a custom `Requests <http://requests.readthedocs.org/en/latest/>`_ class to log onto `Raven <https://raven.cam.ac.uk>`_, the University of Cambridge's central
 web authentication service.
 
 
@@ -31,7 +31,7 @@ with all the methods of the main `Requests API <http://requests.readthedocs.org/
 
     >>> from requests_raven import Raven
 	
-    # Establish Raven connection object for the website www.example.com.
+    # Establish Raven connection object for the website http://qje.oxfordjournals.org.
     >>> deets = {'userid': 'ab123', 'pwd': 'XXXX'}
     >>> conn = Raven(url='http://qje.oxfordjournals.org', login=deets)
 	
@@ -52,10 +52,10 @@ with all the methods of the main `Requests API <http://requests.readthedocs.org/
     <title>Behavioral Hazard in Health Insurance </title>
 
 
-``JSTOR``, ``EBSCOhost`` and ``Wiley`` are ``Raven`` subclasses specifically for logging onto www.jstor.org,
-www.ebscohost.com and `onlinelibrary.wiley.com <http://onlinelibrary.wiley.com/>`_ respectively.
+``JSTOR``, ``EBSCOhost`` and ``Wiley`` are ``Raven`` subclasses specifically for logging onto `www.jstor.org <http://www.jstor.org>`_,
+`www.ebscohost.com <http://www.ebscohost.com>`_ and `onlinelibrary.wiley.com <http://onlinelibrary.wiley.com/>`_, respectively.
 They include the ``html``, ``pdf`` and ``ref`` methods to download the webpage HTML, PDF and bibliographic
-information, respectively, of a particular document.
+information of a particular document.
 
 .. code-block:: python
     
@@ -67,8 +67,6 @@ information, respectively, of a particular document.
     # Download the HTML on the document webpage.
     >>> doc_id = '10.1086/682574'
     >>> html = conn.html(id=doc_id)
-	>>> html
-	...
 	
     # Download the document PDF.
     >>> pdf = conn.pdf(id=doc_id, file='article.pdf')
