@@ -1,7 +1,7 @@
-Raven
-=====
+Requests-Raven
+==============
 
-Raven Request is a custom Requests class to log onto Raven, the University of Cambridge's central
+Requests-Raven is a custom Requests class to log onto Raven, the University of Cambridge's central
 web authentication service.
 
 
@@ -10,24 +10,26 @@ Installation
 	
 .. code-block:: bash
 
-	$ pip install raven_request
+	$ pip install requests_raven
 
 
 Documentation
 -------------
 
-Detailed documentation available at `erinhengel.com <http://www.erinhengel.com/software/raven-request/>`_. 
+Detailed documentation available at `erinhengel.com <http://www.erinhengel.com/software/requests-raven/>`_. 
 
 
 Quickstart
 ----------
 
-The Raven class logs into Raven and establishes a connection with the host. The ``session`` attribute returns a `Request Session object <http://requests.readthedocs.org/en/latest/user/advanced/#session-objects>`_ with all the methods of the main `Requests API <http://requests.readthedocs.org/en/latest/>`_.
+The ``Raven`` class logs onto Raven and establishes a connection with the host. The ``session`` attribute
+returns a `Request Session object <http://requests.readthedocs.org/en/latest/user/advanced/#session-objects>`_
+with all the methods of the main `Requests API <http://requests.readthedocs.org/en/latest/>`_.
 
 
 .. code-block:: python
 
-    >>> from raven_request import Raven
+    >>> from requests_raven import Raven
 	
     # Establish Raven connection object for the website www.example.com.
     >>> deets = {'userid': 'ab123', 'pwd': 'XXXX'}
@@ -35,7 +37,7 @@ The Raven class logs into Raven and establishes a connection with the host. The 
 	
     # The final destination url looks something like this.
     >>> conn.url
-    http://libsta28.lib.cam.ac.uk:2924
+    'http://libsta28.lib.cam.ac.uk:2314'
 	
     # Use session attribute to access Requests methods.
     >>> url = conn.url + '/content/130/4/1623.full'
@@ -50,27 +52,29 @@ The Raven class logs into Raven and establishes a connection with the host. The 
     <title>Behavioral Hazard in Health Insurance </title>
 
 
-JSTOR, EBSCOhost and Wiley are Raven subclasses specifically for logging onto www.jstor.org,
+``JSTOR``, ``EBSCOhost`` and ``Wiley`` are ``Raven`` subclasses specifically for logging onto www.jstor.org,
 www.ebscohost.com and `onlinelibrary.wiley.com <http://onlinelibrary.wiley.com/>`_ respectively.
-They include the ``html``, ``pdf`` and ``ref`` methods to download the webpage, pdf and bibliographic
-information, respectively, of a particular document in their databases.
+They include the ``html``, ``pdf`` and ``ref`` methods to download the webpage HTML, PDF and bibliographic
+information, respectively, of a particular document.
 
 .. code-block:: python
     
-    >>> from raven_request import JSTOR
+    >>> from requests_raven import JSTOR
 	
-    # Establish Raven conncection object to the document 10.1068/682574 on jstor.org.
-    >>> doi = '10.1086/682574'
+    # Establish Raven connection object to the document 10.1068/682574 on jstor.org.
     >>> conn = JSTOR(login=deets)
 	
-    # Download the html of the document webpage.
-    >>> html = conn.html(id=doi)
+    # Download the HTML on the document webpage.
+    >>> doc_id = '10.1086/682574'
+    >>> html = conn.html(id=doc_id)
+	>>> html
+	...
 	
-    # Download the document pdf.
-    >>> pdf = conn.pdf(id=doi)
+    # Download the document PDF.
+    >>> pdf = conn.pdf(id=doc_id, file='article.pdf')
     
-    # Download the biliographic information.
-    >>> biblio = conn.ref(id=doi)
+    # Download the bibliographic information.
+    >>> biblio = conn.ref(id=doc_id)
     >>> biblio['authors']
     [{'name': 'Per Krusell'}, {'name': 'Anthony A. Smith'}]
 
