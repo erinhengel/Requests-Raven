@@ -16,7 +16,7 @@ Installation
 Documentation
 -------------
 
-Detailed documentation available at `erinhengel.com/software/requests_raven <http://www.erinhengel.com/software/requests-raven/>`_. 
+Detailed documentation available at  `erinhengel.com/software/requests_raven <http://www.erinhengel.com/software/requests-raven/>`_. 
 
 
 Quickstart
