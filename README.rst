@@ -40,7 +40,7 @@ with all the methods of the main `Requests API <http://requests.readthedocs.org/
     'http://libsta28.lib.cam.ac.uk:2314'
 	
     # Use session attribute to access Requests methods.
-    >>> url = conn.url + '/content/130/4/1623.full'
+    >>> url = '{}/content/130/4/1623.full'.format(conn.url)
     >>> request = conn.session.get(url)
     >>> request.status_code
     200
