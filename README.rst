@@ -52,8 +52,8 @@ with all the methods of the main `Requests API <http://requests.readthedocs.org/
     <title>Behavioral Hazard in Health Insurance </title>
 
 
-``JSTOR``, ``EBSCOhost`` and ``Wiley`` are ``Raven`` subclasses specifically for logging onto `www.jstor.org <http://www.jstor.org>`_,
-`www.ebscohost.com <http://www.ebscohost.com>`_ and `onlinelibrary.wiley.com <http://onlinelibrary.wiley.com/>`_, respectively.
+``JSTOR``, ``EBSCOhost`` and ``Wiley`` are ``Raven`` subclasses specifically for logging onto `jstor.org <http://www.jstor.org>`_,
+`ebscohost.com <http://www.ebscohost.com>`_ and `onlinelibrary.wiley.com <http://onlinelibrary.wiley.com/>`_, respectively.
 They include the ``html``, ``pdf`` and ``ref`` methods to download the webpage HTML, PDF and bibliographic
 information of a particular document.
 
