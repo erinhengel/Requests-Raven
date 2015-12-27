@@ -31,7 +31,7 @@ with all the methods of the main `Requests API <http://requests.readthedocs.org/
 
     >>> from requests_raven import Raven
 	
-    # Establish Raven connection object for the website http://qje.oxfordjournals.org.
+    # Establish Raven connection object for the website qje.oxfordjournals.org.
     >>> deets = {'userid': 'ab123', 'pwd': 'XXXX'}
     >>> conn = Raven(url='http://qje.oxfordjournals.org', login=deets)
 	
@@ -61,10 +61,10 @@ information of a particular document.
     
     >>> from requests_raven import JSTOR
 	
-    # Establish Raven connection object to the document 10.1068/682574 on jstor.org.
+    # Establish Raven connection object for the website jstor.org.
     >>> conn = JSTOR(login=deets)
 	
-    # Download the HTML on the document webpage.
+    # Download the HTML of the JSTOR webpage for the article with document id 10.1068/682574.
     >>> doc_id = '10.1086/682574'
     >>> html = conn.html(id=doc_id)
 	
