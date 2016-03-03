@@ -4,6 +4,7 @@ from requests_raven import Raven
 from urllib.parse import urlparse, parse_qs
 import xmltodict
 from bs4 import BeautifulSoup
+from pprint import pprint
 
 class EBSCOhost(Raven):
     """ Create Raven connection to www.ebscohost.com.
@@ -105,11 +106,28 @@ class EBSCOhost(Raven):
         a_info = data['controlInfo']['artinfo']['aug']
         affiliation = any('affil' in item for item in a_info.items())
         authors = []
-        for n in range(len(a_info['au'])):
+        # ERROR; FIXED: Single authored articles come out [{'name': J}, {'name': o}, ...]
+        # Solo-authors are strings.
+        if isinstance(a_info['au'], str):
             if affiliation:
-                authors.append({'name': a_info['au'][n], 'affiliation': a_info['affil'][n]})
+                authors.append({'name': a_info['au'], 'affiliation': a_info['affil']})
             else:
-                authors.append({'name': a_info['au'][n]})
+                authors.append({'name': a_info['au']})
+        # Multiple authors are lists.
+        else:
+            for n in range(len(a_info['au'])):
+                if affiliation:
+                    # If only one affiliation for all authors.
+                    if isinstance(a_info['affil'], str):
+                        authors.append({'name': a_info['au'][n], 'affiliation': a_info['affil']})
+                    # If more or fewer affiliations than authors.
+                    elif len(a_info['affil']) != len(a_info['au']):
+                        authors.append({'name': a_info['au'][n], 'affiliation': ' '.join(a_info['affil'])})
+                    # If number of affiliations equals number of authors.
+                    else:
+                        authors.append({'name': a_info['au'][n], 'affiliation': a_info['affil'][n]})
+                else:
+                    authors.append({'name': a_info['au'][n]})
         bibtex['authors'] = authors
         
         return bibtex
