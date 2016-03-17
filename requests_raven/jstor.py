@@ -5,6 +5,7 @@ import bibtexparser
 from bibtexparser.bparser import BibTexParser
 from bibtexparser.customization import convert_to_unicode
 from bs4 import BeautifulSoup
+from pprint import pprint
 
 class JSTOR(Raven):
     """ Create Raven connection to www.jstor.org.
@@ -43,9 +44,16 @@ class JSTOR(Raven):
         print("PDF not found.")
         return
     
-    def ref(self, id, affiliation=False):
+    def ref(self, id, affiliation=False, standardised=True):
         """ Download bibliographic data of document. 
             If affiliation, find institutions affiliated with authors. """
+        
+        # Return integer if number.
+        def make_integer(s):
+            try:
+                return int(s)
+            except ValueError:
+                return s
         
         ref_url = '{}/citation/text/{}'.format(self.url, id)
         request = self.session.get(ref_url)
@@ -59,10 +67,11 @@ class JSTOR(Raven):
         except IndexError:
             return
         
-        # Change 'author' to list of dictionaries with key value 'authors'. 
-        bibtex['authors'] = bibtex.pop('author')
-        bibtex['authors'] = list(map(str.strip, bibtex['authors'].split(',')))
-        bibtex['authors'] = [{'name': x} for x in bibtex['authors']]
+        # Change 'author' to list of dictionaries with key value 'authors'.
+        if 'author' in bibtex:
+            bibtex['authors'] = bibtex.pop('author')
+            bibtex['authors'] = list(map(str.strip, bibtex['authors'].split(',')))
+            bibtex['authors'] = [{'Name': x} for x in bibtex['authors']]
         
         bibtex['issn'] = list(map(str.strip, bibtex['issn'].split(',')))
         bibtex['year'] = int(bibtex['year'])
@@ -73,12 +82,46 @@ class JSTOR(Raven):
             html = self.html(id=id)
             soup = BeautifulSoup(html, 'html.parser')
             authinfo = soup.find('div', class_='authorInfo')
-            print(authinfo)
             if authinfo:
                 for n in range(len(bibtex['authors'])):
-                    regex = '\s'.join(bibtex['authors'][n]['name'].split())
+                    regex = '\s'.join(bibtex['authors'][n]['Name'].split())
                     affiliation = authinfo.find(string=re.compile(regex, re.UNICODE))
                     if affiliation:
-                        bibtex['authors'][n]['affiliation'] = affiliation.next_element.string.strip()
+                        bibtex['authors'][n]['Affiliation'] = affiliation.next_element.string.strip()
+        
+        # If standardised keyword is true, return standardised bibliography reference.
+        # Fixed: number not always in bibtex.
+        if standardised:
+            standard = {
+                'Journal': bibtex['journal'],
+                'Volume': bibtex['volume'],
+                'DOI': bibtex['ID'],
+                'ISSN': bibtex['issn'],
+                'Year': bibtex['year']
+            }
+            
+            if 'number' in bibtex:
+                standard['Issue'] = bibtex['number'].strip()
+            
+            if 'abstract' in bibtex:
+                standard['Abstract'] = bibtex['abstract'].strip()
+            
+            if 'title' in bibtex:
+                standard['Title'] = bibtex['title']
+            
+            if 'authors' in bibtex:
+                standard['Authors'] = bibtex['authors']
+            
+            # Page numbers.
+            if 'pages' in bibtex:
+                pages = bibtex['pages'].split('-')
+                standard['FirstPage'] = make_integer(pages[0])
+                standard['LastPage'] = make_integer(pages[1])
+                if isinstance(standard['FirstPage'], int) and isinstance(standard['LastPage'], int):
+                    if standard['LastPage'] < standard['FirstPage']:
+                        substr = len(str(standard['FirstPage'])) - len(str(standard['LastPage']))
+                        standard['LastPage'] = int(str(standard['FirstPage'])[:substr] + str(standard['LastPage']))
+            
+            bibtex = standard
                         
         return bibtex

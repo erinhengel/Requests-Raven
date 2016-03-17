@@ -25,13 +25,21 @@ class OxfordQJE(Raven):
         request = self.session.get(search_url, params=params)
         soup = BeautifulSoup(request.text, 'html.parser')
         
-        frame_link = soup.find(attrs={'rel': 'full-text.pdf'})['href']
-        issue = re.search('(content|reprint)/(?P<vol>\d+)/(?P<num>\d+)/(?P<page>\d+).*\?sid=(?P<sid>.*)', frame_link).groupdict()
+        # HTML appears to have changed; added new way to obtain link.
+        try:
+            frame_link = soup.find(attrs={'rel': 'full-text.pdf'})['href']
+            issue = re.search('(content|reprint)/(?P<vol>\d+)/(?P<num>\d+)/(?P<page>\d+).*\?sid=(?P<sid>.*)', frame_link).groupdict()
+            gca = 'qje;{}/{}/{}'.format(issue['vol'], issue['num'], issue['page'])
+            html_link = '{}/content/{}/{}/{}.abstract?sid={}'.format(self.url, issue['vol'], issue['num'], issue['page'], issue['sid'])
+            pdf_link = '{}/content/{}/{}/{}.full.pdf'.format(self.url, issue['vol'], issue['num'], issue['page'])
+            
+        except AttributeError:
+            found_html = soup.find('div', 'cit-extra')
+            html_link = found_html.find(attrs={'rel': 'abstract'})['href']
+            pdf_link = found_html.find(attrs={'rel': 'full-text.pdf'})['href'].replace('pdf+html', 'pdf')
+            gca = soup.find(attrs={'name': 'gca'})['value']
         
-        html_link = '{}/content/{}/{}/{}.abstract?sid={}'.format(self.url, issue['vol'], issue['num'], issue['page'], issue['sid'])
-        pdf_link = '{}/content/{}/{}/{}.full.pdf'.format(self.url, issue['vol'], issue['num'], issue['page'])
-        
-        return {'html': html_link, 'pdf': pdf_link, 'issue': issue}
+        return {'html': html_link, 'pdf': pdf_link, 'gca': gca}
     
     def html(self, id):
         """ Download HTML of document's webpage. """
@@ -48,20 +56,21 @@ class OxfordQJE(Raven):
         
         # Save locally if file specified.
         mypdf = request.content
+        # TO DO: CHECK TO MAKE SURE ITS A PDF.
         if file:
             with open(file, 'wb') as fh:
                 fh.write(mypdf)
         
         return mypdf
     
-    def ref(self, id, affiliation=False):
+    def ref(self, id, affiliation=False, standardised=False):
         """ Download bibliographic data of document. 
             If affiliation, find institutions affiliated with authors. """
         
         # Export Bibtex.
         links = self.search(id)
-        gca = 'qje;{}/{}/{}'.format(links['issue']['vol'], links['issue']['num'], links['issue']['page'])
-        params = {'type': 'bibtex', 'gca' : gca}
+        
+        params = {'type': 'bibtex', 'gca' : links['gca']}
         request = self.session.get(self.url+'/citmgr', params=params)
         
         # Parse Bibtex.
@@ -72,6 +81,9 @@ class OxfordQJE(Raven):
             bibtex = bibtexparser.loads(text, parser=parser).entries[0]
         except IndexError:
             return
+        
+        # Make sure you got the right record!
+        assert id == bibtex['doi']
         
         bibtex['authors'] = bibtex.pop('author')
         bibtex['authors'] = list(map(str.strip, bibtex['authors'].split(' and ')))
@@ -95,5 +107,55 @@ class OxfordQJE(Raven):
             except AttributeError:
                 for n in range(len(bibtex['authors'])):
                     bibtex['authors'][n]['affiliation'] = None
+        
+        # If standardised, return a standardised set of bibliographic information;
+        # otherwise, ref returns whatever is returned by Oxford's citation tool.
+        if standardised:
+            standard = {
+                'Volume': int(bibtex['volume']),
+                'Issue': bibtex['number'],
+                'Title': bibtex['title'].strip(),
+                'Journal': 'QJE',
+                'DOI': bibtex['doi'],
+                'Abstract': bibtex['abstract'].strip(),
+                'JEL': [],
+                'Authors': []
+            }
+
+            # Publication date.
+            if bibtex['number'] == '1':
+                standard['PubDate'] = '{}-02-01'.format(bibtex['year'])
+            elif bibtex['number'] == '2':
+                standard['PubDate'] = '{}-05-01'.format(bibtex['year'])
+            elif bibtex['number'] == '3':
+                standard['PubDate'] = '{}-08-01'.format(bibtex['year'])
+            elif bibtex['number'] == '4':
+                standard['PubDate'] = '{}-11-01'.format(bibtex['year'])
+            elif bibtex['number'] == 'Supplement':
+                standard['PubDate'] = '{}-01-01'.format(bibtex['year'])
+
+            # Page numbers.
+            pages = bibtex['pages'].split('-')
+            standard['FirstPage'] = int(pages[0])
+            standard['LastPage'] = int(pages[1])
+            if standard['LastPage'] < standard['FirstPage']:
+                substr = len(str(standard['FirstPage'])) - len(str(standard['LastPage']))
+                standard['LastPage'] = int(str(standard['FirstPage'])[:substr] + str(standard['LastPage']))
+    
+            # Find JEL classification codes.
+            jel_regex = re.compile(r'(.*) JEL Codes?: (.*)\.$')
+            jel_regex_match = jel_regex.search(bibtex['abstract'])
+            if jel_regex_match:
+                standard['Abstract'] = jel_regex_match.group(1).strip()
+                standard['JEL'] = [x.strip() for x in jel_regex_match.group(2).split(',')]
+
+            # Author
+            for author in bibtex['authors']:
+                aut = {'Name': author['name']}
+                if 'affiliation' in author:
+                    aut['Affiliation'] = author['affiliation']
+                standard['Authors'].append(aut)
+            
+            bibtex = standard
                     
         return bibtex
